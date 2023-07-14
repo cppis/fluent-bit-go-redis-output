@@ -1,38 +1,27 @@
-# fluent-bit redis output plugin
+# [fluent-bit redis output plugin](https://github.com/majst01/fluent-bit-go-redis-output) 수정
 
 [![Build Status](https://travis-ci.org/majst01/fluent-bit-go-redis-output.svg?branch=master)](https://travis-ci.org/majst01/fluent-bit-go-redis-output)
 [![codecov](https://codecov.io/gh/majst01/fluent-bit-go-redis-output/branch/master/graph/badge.svg)](https://codecov.io/gh/majst01/fluent-bit-go-redis-output)
 [![Go Report Card](https://goreportcard.com/badge/majst01/fluent-bit-go-redis-output)](https://goreportcard.com/report/github.com/majst01/fluent-bit-go-redis-output)
 
-This plugin is used to have redis output from fluent-bit. You can use fluent-bit redis instead of logstash in a configuration
-where you have a redis and optional stunnel in front of your elasticsearch infrastructure. 
+fluent-bit TCP input 으로 받은 json 을 파싱하면서 문자열이 Base64 인코딩이 되는 이슈가 있어서 개선 중임.  
 
-The configuration typically looks like:
+<br/><br/>
 
-```graphviz
-fluent-bit --> stunnel --> redis <-- logstash --> elasticsearch
-```
-
-If you have multiple elastic search servers, each covered with a redis cache in front it might look like this:
-
-```graphviz
-           /-> stunnel --> redis <-- logstash --> elasticsearch 
-           |
-fluent-bit --> stunnel --> redis <-- logstash --> elasticsearch
-           |
-           \-> stunnel --> redis <-- logstash --> elasticsearch
-```
-
-# Usage
+## Usage
 
 ```bash
 docker run -it --rm -v /path/to/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf majst01/fluent-bit-go-redis-output
 ```
 
-## Building
+### Building
 
 ```bash
-docker build --no-cache --tag fluent-bit-go-redis-output .
+docker build --no-cache --tag localhost:5001/fluent-bit-go-redis-output:latest .
+docker push localhost:5001/fluent-bit-go-redis-output:latest
+
+go build -ldflags "-X 'main.revision=00000000' -X 'main.builddate=023-07-14 14:00:00+09:00'" -buildmode=c-shared -o out_redis.so .
+
 docker run -it --rm -v /path/to/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf fluent-bit-go-redis-output
 ```
 
@@ -65,7 +54,19 @@ add this section to fluent-bit.conf
     Key elastic-logstash
 ```
 
-## Useful links
+<br/><br/>
+
+
+## Fixes  
+
+* builder 의 Go 버전을 1.19 에서 1.18 로 수정  
+
+  `/lib/x86_64_linux_gnu/libc.so.6: version 'GLIBC_2.32' not found` 에러를 수정하기 위해 Go 버전을 GLIBC_2.31 을 사용하도록 Go 버전 다운그레이드.   
+* 
+
+<br/><br/>
+
+## References  
 
 ### Redis format
 
@@ -74,15 +75,3 @@ add this section to fluent-bit.conf
 ### Logstash Redis Output
 
 - [logstash-redis-docu](https://github.com/logstash-plugins/logstash-output-redis/blob/master/docs/index.asciidoc)
-
-## TODO
-
-### Strategies for redis connection error handling
-
-1. crash on connection errors
-
-Given a list of 4 Redis databases, we pick on start a random one, if during operation this fails we panic and on restart the next hopefully working is selected.
-
-1. rely on FLB_RETRY
-
-With a list of redis databases we can create a list of pools, one pool per database and instead of doing a pool.Get(), call list.Get() with selects the next random redis database. If a failure occurs return FLB_RETRY and the library will retry.

@@ -20,4 +20,4 @@ clean:
 	rm -rf *.so *.h *~
 
 dockerimage:
-	docker build -t majst01/fluent-bit-go-redis-output .
+	docker build -t cppis/fluent-bit-out-redis .
